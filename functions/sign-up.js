@@ -9,15 +9,19 @@ exports.signUp = functions.https.onCall((data,context)=>{
     const refString = "Users/"+uid;
     const userRef = db.ref(refString);
     const groupRef = db.ref("Groups");
+    var userExisting = true;
     
     userRef.once("value", function(snap){
       return snap;
     }).then(value=>{
       if (!value.exists()){
+        userExisting = false;
         userRef.set({
             "uid":uid,
             "username":data.username,
-            "email":data.email
+            "email":data.email,
+            "number_of_notifications":0,
+            "unread_messages":0
         })
         if (data.avatar){
             userRef.update({
@@ -31,16 +35,20 @@ exports.signUp = functions.https.onCall((data,context)=>{
       }
     }
     ).then(()=>{
-      return groupRef.push({
-        "type":"individual"
-      })
+      if (!userExisting){
+        return groupRef.push({
+          "type":"individual"
+        })
+      }
     }).then((ref)=>{
-      const memberRef = db.ref("Groups/"+ref.key+"/members/"+uid);
-      memberRef.set({
-        "state":"Accepted"
-      });
-      userRef.update({
-        "group":ref.key
-      });
+      if (!userExisting){
+        const memberRef = db.ref("Groups/"+ref.key+"/members/"+uid);
+        memberRef.set({
+          "state":"Accepted"
+        });
+        userRef.update({
+          "group":ref.key
+        });
+      }
     })
 })

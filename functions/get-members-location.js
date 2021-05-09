@@ -19,9 +19,15 @@ exports.getMembersLocation = functions.https.onCall((data,context)=>{
         var listMembers = [];
         for (var member in members){
             var info = members[member];
-            if (info.state =="Accepted"){
+            if (info.state =="Accepted" || member == context.auth.uid || info.state == "Leader and Accepted"){
                 var memberRef = db.ref("Users/"+member+"/avatar");
-                listMembers.push(memberRef.once("value").then((snapshot)=>{return snapshot.val().url}));
+                listMembers.push(memberRef.once("value").then((snapshot)=>{
+                    if (snapshot.exists()){
+                        return snapshot.val().url;
+                    }else{
+                        return null;
+                    }
+                }));
                 listLocation.push(info.location);
                 listID.push(member);
             }
@@ -30,11 +36,13 @@ exports.getMembersLocation = functions.https.onCall((data,context)=>{
     }).then((urls)=>{
         const response = {};
         for (let i = 0;i<listID.length;i++){
-            response[listID[i]] = {
-                "uid":listID[i],
-                "url":urls[i],
-                "latitude":listLocation[i].latitude,
-                "longitude":listLocation[i].longitude
+            if (listLocation[i]){
+                response[listID[i]] = {
+                    "uid":listID[i],
+                    "url":urls[i],
+                    "latitude":listLocation[i].latitude,
+                    "longitude":listLocation[i].longitude
+                }
             }
         }
         return response;
