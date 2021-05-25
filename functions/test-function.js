@@ -3,51 +3,126 @@ const admin = require("firebase-admin");
 const algoliasearch = require("algoliasearch");
 const db = admin.database();
 const client = algoliasearch(functions.config().algolia.appid,functions.config().algolia.apikey);
-const index = client.initIndex("TouristSupport");
+const index = client.initIndex("Posts");
+const geofire = require("geofire-common");
 
-exports.testFunction = functions.https.onRequest((req,res)=>{
-    const uid = "8In6yl5sllZDlliVpYofnsDdUWG2";
-
-    return db.ref("Users/"+uid).once("value")
-        .then((snap)=>{
-            const notifications = snap.val().notifications;
-            let listPromise = [];
-            for (const notificationID in notifications){
-                const notification = notifications[notificationID];
-                if (notification.type == "invitation"){
-                    let fromName;
-                    let fromUrl;
-                    let groupName;
-                    const content = db.ref("Users/"+notification.from).once("value")
-                        .then((snap)=>{
-                            fromName = snap.val().username;
-                            fromUrl = snap.val().avatar.url;
-                        }).then(()=>{
-                            return db.ref("Groups/"+notification.content).once("value")
-                                .then((snap)=>{
-                                    groupName = snap.val().name;
-                                })
-                        }).then(()=>{
-                            let response = {};
-                            response[notificationID]={
-                                "type":"invitation",
-                                "content": "<b>"+fromName+"</b> invited you to join the group <b>"+groupName+"</b>.",
-                                "url":fromUrl
-                            }
-                            return response;
-                        });
-                    listPromise.push(content);
+exports.testFunction = functions.https.onRequest((req,respon)=>{
+    const mode = "Nearby";
+    const topic = "All";
+    const query = "";
+    let listPosts = [];
+    let listPostQuery = [];
+    let check = true;
+    if (mode == "All posts"){
+        return index.search(query)
+        .then((res)=>{
+            const result = res.hits;
+            let i = 0;
+            let postIDs = {};
+            for (;i<result.length;i++){
+                const post = result[i];
+                if (topic != "All"){
+                    if (topic == post.topic){
+                        listPostQuery.push(post.objectID);
+                        postIDs[post.objectID] = true;
+                    }
+                }else{
+                    listPostQuery.push(post.objectID);
+                    postIDs[post.objectID] = true;
                 }
             }
-            return Promise.all(listPromise)
-        }).then((response)=>{
-            let i = 0;
-            let res1 = {};
-            for (;i<response.length;i++){
-                const notification = response[i];
-                const id = Object.keys(notification)[0];
-                res1[id] = notification[id];
+            if (listPostQuery.length == 0){
+                check = false;
+                return respon.send({});
             }
-            res.send(res1);
-        });
+            return db.ref("Posts").orderByChild("noLike").once("value").then((snap)=>{
+                const result = snap.val();
+                let posts = [];
+                for (const postID in result){
+                    if (postIDs[postID]){
+                        posts.push(result[postID]);
+                    }
+                }
+                return posts;
+            })
+        })
+        .then((posts)=>{
+            if (check){
+                let i = 0;
+                let listPromise = [];
+                
+                for (;i<posts.length;i++){
+                    const post = posts[i];
+                    if (post.noReport <= 10){
+                        const photos = JSON.parse(post.photo);
+                        listPosts.push({
+                            postID: listPostQuery[i],
+                            time:post.time,
+                            title:post.title,
+                            photo:photos[0],
+                            noLike:post.noLike,
+                            noComment:post.noComment,
+                            noShare:post.notShare
+                        })
+                        listPromise.push(db.ref("Users/"+post.owner).once("value")
+                        .then((snap)=>{
+                            const user = snap.val();
+                            let avatar = "";
+                            if (user.avatar){
+                                avatar = user.avatar.url;
+                            }
+                            return {
+                                ownerName:user.username,
+                                ownerAvatar: avatar,
+                            }
+                        }))
+                    }
+                }
+                if (listPromise.length == 0){
+                    check = false;
+                    return {};
+                }else{
+                    return Promise.all(listPromise);
+                }
+            }
+        })
+        .then((users)=>{
+            if (check){
+                let i = 0;
+                let res = {};
+                for (;i<users.length;i++){
+                    const user =users[i];
+                    listPosts[i]["ownerName"] = user.ownerName;
+                    listPosts[i]["ownerAvatar"] = user.ownerAvatar;
+                    res[listPosts[i]["postID"]] = listPosts[i];
+                }
+                respon.send(res);
+            }
+        })
+    }
+    if (mode == "Nearby"){
+        const cars = [
+
+            {
+                name: "Honda",
+                speed: 80
+            },
+        
+            {
+                name: "BMW",
+                speed: 180
+            },
+        
+            {
+                name: "Trabi",
+                speed: 40
+            },
+        
+            {
+                name: "Ferrari",
+                speed: 200
+            }
+        ]
+        respon.send(cars.sort((a,b)=> {return -a.speed+b.speed}));    
+    }
 })

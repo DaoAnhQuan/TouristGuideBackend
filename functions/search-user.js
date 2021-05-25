@@ -52,7 +52,11 @@ exports.searchUser = functions.https.onCall((data,context)=>{
         })
         .then((urls)=>{
             for (let url in urls){
-                listUrls.push(urls[url]);
+                if (url){
+                    listUrls.push(urls[url]);
+                }else{
+                    listUrls.push("");
+                }
             }
         }).then(()=>{
             let listPromise=[];
@@ -92,13 +96,10 @@ exports.searchUser = functions.https.onCall((data,context)=>{
             }
             for (i = 0; i<len;i++){
                 let user = listUser[i];
-                let groupType = listGroups[i];
-                if (groupType == "individual"){
-                    listMembers[user["uid"]]={
-                        "uid":user["uid"],
-                        "username":user["username"],
-                        "url":listUrls[i]
-                    }
+                listMembers[user["uid"]]={
+                    "uid":user["uid"],
+                    "username":user["username"],
+                    "url":listUrls[i]
                 }
             }
             return listMembers;

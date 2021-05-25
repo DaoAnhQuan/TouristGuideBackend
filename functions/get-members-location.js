@@ -6,8 +6,9 @@ const db = admin.database();
 exports.getMembersLocation = functions.https.onCall((data,context)=>{
     const uid = context.auth.uid;
     const userRef = db.ref("Users/"+uid);
-    const listLocation=[];
-    const listID = []
+    let listLocation=[];
+    let listID = [];
+    let listSOS = [];
     return userRef.once("value")
     .then((value)=>{
         return value.val().group;
@@ -18,8 +19,13 @@ exports.getMembersLocation = functions.https.onCall((data,context)=>{
         var members = snapshot.val().members;
         var listMembers = [];
         for (var member in members){
-            var info = members[member];
+            var info = members[member]; 
             if (info.state =="Accepted" || member == context.auth.uid || info.state == "Leader and Accepted"){
+                if (info.SOS){
+                    listSOS.push(true);
+                }else{
+                    listSOS.push(false);
+                }
                 var memberRef = db.ref("Users/"+member+"/avatar");
                 listMembers.push(memberRef.once("value").then((snapshot)=>{
                     if (snapshot.exists()){
@@ -41,7 +47,8 @@ exports.getMembersLocation = functions.https.onCall((data,context)=>{
                     "uid":listID[i],
                     "url":urls[i],
                     "latitude":listLocation[i].latitude,
-                    "longitude":listLocation[i].longitude
+                    "longitude":listLocation[i].longitude,
+                    "sos":listSOS[i],
                 }
             }
         }

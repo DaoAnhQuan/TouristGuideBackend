@@ -27,12 +27,24 @@ exports.getMembersInfo = functions.https.onCall((data,context)=>{
                 const content = db.ref("Users/"+memberID).once("value")
                     .then((snap)=>{
                         const user = snap.val();
+                        let url = "";
+                        let time = "";
+                        let download = "false";
+                        let phone = "";
+                        if (user.phone){
+                            phone=user.phone;
+                        }
+                        if (user.avatar){
+                            url = user.avatar.url;
+                            time = user.avatar.time;
+                            download = user.avatar.download.toString();
+                        }
                         response[user.uid] = {
                             "username":user.username,
-                            "avatar_url":user.avatar.url,
-                            "avatar_time":user.avatar.time,
-                            "avatar_download":user.avatar.download.toString(),
-                            "phone":user.phone,
+                            "avatar_url":url,
+                            "avatar_time":time,
+                            "avatar_download":download,
+                            "phone":phone,
                             "email":user.email,
                             "state":state,
                             "uid":user.uid

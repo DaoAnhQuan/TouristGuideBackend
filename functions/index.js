@@ -20,7 +20,19 @@ const notificationProcess = require("./notification-process.js");
 const leaveGroup = require("./leave-group.js");
 const joinGroup = require("./join-group.js");
 const getMembersInfo = require("./get-members-info.js");
-
+const addMember = require("./add-member.js");
+const changeLeader = require("./change-leader.js");
+const addPhotoMessage = require("./add-photo-message.js");
+const addTextMessage = require("./add-text-message.js");
+const setGroupName = require("./set-group-name.js");
+const setGroupPhoto = require("./set-group-photo.js");
+const addLocationMessage = require("./add-location-message.js");
+const getLastLocation = require("./get-last-location.js");
+const updateSOS = require("./update-sos.js");
+const createPost = require("./create-post.js");
+const postCreateTrigger = require("./post-create-trigger.js");
+const postUpdateTrigger = require("./post-update-trigger.js");
+const postDeleteTrigger = require("./post-delete-trigger.js");
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
 
@@ -51,3 +63,16 @@ exports.notificationProcess = notificationProcess.notificationProcess;
 exports.leaveGroup = leaveGroup.leaveGroup;
 exports.joinGroup = joinGroup.joinGroup;
 exports.getMembersInfo = getMembersInfo.getMembersInfo;
+exports.addMember = addMember.addMember;
+exports.changeLeader = changeLeader.changeLeader;
+exports.addPhotoMessage = addPhotoMessage.addPhotoMessage;
+exports.addTextMessage = addTextMessage.addTextMessage;
+exports.setGroupName = setGroupName.setGroupName;
+exports.setGroupPhoto = setGroupPhoto.setGroupPhoto;
+exports.addLocationMessage = addLocationMessage.addLocationMessage;
+exports.getLastLocation = getLastLocation.getLastLocation;
+exports.updateSOS = updateSOS.updateSOS;
+exports.createPost = createPost.createPost;
+exports.postCreateTrigger = postCreateTrigger.postCreateTrigger;
+exports.postUpdateTrigger = postUpdateTrigger.postUpdateTrigger;
+exports.postDeleteTrigger = postDeleteTrigger.postDeleteTrigger;

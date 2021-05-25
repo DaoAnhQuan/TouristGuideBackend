@@ -10,8 +10,8 @@ exports.getNotifications = functions.https.onCall((data,context)=>{
             const notifications = snap.val().notifications;
             let listPromise = [];
             for (const notificationID in notifications){
+                console.log(notificationID);
                 const notification = notifications[notificationID];
-                console.log(notification.type);
                 let content;
                 if (notification.type == "invitation" || notification.type == "join request"){
                     let fromName="";
@@ -20,7 +20,9 @@ exports.getNotifications = functions.https.onCall((data,context)=>{
                     content = db.ref("Users/"+notification.from).once("value")
                         .then((snap)=>{
                             fromName = snap.val().username;
-                            fromUrl = snap.val().avatar.url;
+                            if (snap.val().avatar){
+                                fromUrl = snap.val().avatar.url;
+                            }
                         }).then(()=>{
                             return db.ref("Groups/"+notification.content).once("value")
                                 .then((snap)=>{
@@ -67,7 +69,30 @@ exports.getNotifications = functions.https.onCall((data,context)=>{
                         })
                 
                 }
-                
+                if (notification.type == "remove member"){
+                    let groupName;
+                    content = db.ref("Groups/"+notification.content+"/name").once("value")
+                        .then((snap)=>{
+                            groupName = snap.val();
+                            return db.ref("Users/"+notification.from).once("value")
+                        })
+                        .then((snap)=>{
+                            let fromUrl = "";
+                            const user = snap.val();
+                            if (user.avatar){
+                                fromUrl = user.avatar.url;
+                            }
+                            let response= {};
+                            response[notificationID] = {
+                                id:notificationID,
+                                type:"remove member",
+                                content: "You have been removed from the <b>"+groupName+"</b> group by <b>"+user.username+"</b>.",
+                                url:fromUrl,
+                                time:notification.time
+                            }
+                            return response;
+                        })
+                }
                 listPromise.push(content);
             }
             return Promise.all(listPromise)
@@ -79,6 +104,7 @@ exports.getNotifications = functions.https.onCall((data,context)=>{
                 const id = Object.keys(notification)[0];
                 res[id] = notification[id];
             }
-            return res;
+            
+            return JSON.stringify(res);
         });
 })

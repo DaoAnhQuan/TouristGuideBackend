@@ -7,23 +7,37 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
     const action = data.action;
     const uid = context.auth.uid;
     let notification;
+    let fromName;
+    let fromUrl = "";
     return db.ref("Users/"+uid).once("value")
         .then((snap)=>{
+            fromName = snap.val().username;
+            if (snap.val().avatar){
+                fromUrl = snap.val().avatar.url;
+            }
             const notifications = snap.val().notifications;
             notification = notifications[notificationID];
             if (notification.type == "invitation"){
-                return db.ref("Groups/"+notification.content+"/members").once("value")
+                let isPendingMember = false;
+                return db.ref("Groups/"+notification.content+"/members/"+uid).once("value")
                     .then((snap)=>{
-                        return snap.val();
-                    })
-                    .then((members)=>{
-                        for (const memberID in members){
-                            const member = members[memberID];
-                            if (memberID == uid && member.state=="Pending"){
-                                return true;
-                            }
+                        if (snap.exists()){
+                            const member = snap.val();
+                            return (member.state == "Pending");
                         }
                         return false;
+                    })
+                    .then((isPending)=>{
+                        isPendingMember = isPending;
+                        return db.ref("Users/"+uid+"/group").once("value")
+                            .then((snap)=>{
+                                const groupID = snap.val();
+                                return db.ref("Groups/"+groupID+"/type").once("value")
+                                    .then((snap)=>{
+                                        const groupType = snap.val();
+                                        return (groupType == "individual") && isPending;
+                                    })
+                            })
                     })
                     .then((isPending)=>{
                         if (isPending){
@@ -34,7 +48,7 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                     })
                                     .then((members)=>{
                                         const keys = Object.keys(members);
-                                        if (keys.length<=1){
+                                        if (keys.length==0){
                                             return db.ref("Users/"+uid+"/notifications/"+notificationID).remove()
                                             .then(()=>{
                                                 return db.ref("Groups/"+notification.content).remove();
@@ -45,9 +59,11 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                             let i = 0;
                                             let t = 0;
                                             db.ref("Groups/"+notification.content+"/messages").push({
-                                                "type":"response invitation",
-                                                "content": "accept",
+                                                "type":"notification",
+                                                "content": fromName + " accepted to join the group.",
                                                 "from":uid,
+                                                "fromName":fromName,
+                                                "fromUrl":fromUrl,
                                                 "time":helper.getDateString()
                                             });
                                             for (; i<keys.length;i++){
@@ -98,9 +114,11 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                     })
                                     .then(()=>{
                                         return db.ref("Groups/"+notification.content+"/messages").push({
-                                            "type": "response invitation",
-                                            "content":"decline",
+                                            "type": "notification",
+                                            "content": fromName +" declined to join the group.",
                                             "from":uid,
+                                            "fromName":fromName,
+                                            "fromUrl":fromUrl,
                                             "time":helper.getDateString()
                                         })
                                     })
@@ -109,7 +127,31 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                     })
                             }
                         }else{
-                            return "failed"
+                            if (action == "decline"){
+                                return db.ref("Users/"+uid+"/notifications/"+notificationID).remove()
+                                    .then(()=>{
+                                        if (isPendingMember){
+                                            return db.ref("Groups/"+notification.content+"/members/"+uid).remove();
+                                        }
+                                    })
+                                    .then(()=>{
+                                        if (isPendingMember){
+                                            return db.ref("Groups/"+notification.content+"/messages").push({
+                                                "type": "notification",
+                                                "content": fromName +" declined to join the group.",
+                                                "from":uid,
+                                                "fromName":fromName,
+                                                "fromUrl":fromUrl,
+                                                "time":helper.getDateString()
+                                            })
+                                        }
+                                    })
+                                    .then(()=>{
+                                        return "success";
+                                    })
+                            }else{
+                                return "failed";
+                            }
                         }
                     })
             }
@@ -138,8 +180,10 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                     return "Currently you are not the group leader.";
                                 })
                         }else{
+                            let memberName;
                             return db.ref("Users/"+notification.from).once("value")
                                 .then((snap)=>{
+                                    memberName = snap.val().username;
                                     return snap.val().group;
                                 })
                                 .then((curGroupID)=>{
@@ -161,9 +205,11 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                                             return memberRef.once("value")
                                                                 .then((snap)=>{
                                                                     if (snap.exists()){
-                                                                        return memberRef.update({
-                                                                            "state":"Accepted and No Sharing"
-                                                                        })
+                                                                        if (snap.val().state == "Pending"){
+                                                                            return memberRef.update({
+                                                                                "state":"Accepted and No Sharing"
+                                                                            })
+                                                                        }
                                                                     }else{
                                                                         return memberRef.set({
                                                                             "state":"Accepted and No Sharing"
@@ -178,8 +224,11 @@ exports.notificationProcess = functions.https.onCall((data,context)=>{
                                                         })
                                                         .then(()=>{
                                                             return db.ref("Groups/"+notification.content+"/messages").push({
-                                                                "type":"joined",
+                                                                "type":"notification",
                                                                 "from":uid,
+                                                                "fromUrl":fromUrl,
+                                                                "fromName":fromName,
+                                                                "content": memberName+" joined the group.",
                                                                 "time":helper.getDateString()
                                                             })
                                                         })

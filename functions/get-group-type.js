@@ -28,10 +28,16 @@ exports.getGroupType = functions.https.onCall((data,context)=>{
                 type = "member";
             }
         }
+        let photo = "";
+        if (groupInfo.photo){
+            photo = groupInfo.photo;
+        }
         return {
             "groupID":snapshot.key,
             "type":type,
-            "location sharing": locationSharing
+            "location sharing": locationSharing,
+            "group name": groupInfo.name,
+            "group photo": photo,
         };
     });
 })
