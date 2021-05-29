@@ -39,8 +39,10 @@ exports.getPost = functions.https.onCall((data,context)=>{
                     const result = snap.val();
                     let posts = [];
                     for (const postID in result){
+                        let post = result[postID];
                         if (postIDs[postID]){
-                            posts.push(result[postID]);
+                            post["postID"]=postID;
+                            posts.push(post);
                         }
                     }
                     return posts;
@@ -53,16 +55,28 @@ exports.getPost = functions.https.onCall((data,context)=>{
                 let listPromise = [];
                 for (;i<posts.length;i++){
                     const post = posts[i];
-                    if (post.noReport <= 10){
+                    let noReport = 0;
+                    if (post.reports){
+                        noReport = Object.keys(post.reports).length;
+                    }
+                    if (noReport <= 10){
+                        let noLike = 0;
+                        if (post.likes){
+                            noLike = Object.keys(post.likes).length;
+                        }
+                        let noComment = 0;
+                        if (post.comments){
+                            noComment = Object.keys(post.comments).length;
+                        }
                         const photos = JSON.parse(post.photo);
                         listPosts.push({
-                            postID: listPostQuery[i],
+                            postID: post.postID,
                             time:post.time,
                             title:post.title,
                             photo:photos[0],
-                            noLike:post.noLike,
-                            noComment:post.noComment,
-                            noShare:post.notShare
+                            noLike:noLike,
+                            noComment:noComment,
+                            noShare:post.noShare
                         })
                         listPromise.push(db.ref("Users/"+post.owner).once("value")
                         .then((snap)=>{
@@ -102,12 +116,24 @@ exports.getPost = functions.https.onCall((data,context)=>{
         })
     }
     if (mode == "Nearby"){
-        const latitude = data.latitude;
-        const longitude = data.longitude;
-        const center = [latitude,longitude];
-        const radius = 30*1000;
-        const bounds = geofire.geohashQueryBounds(center,radius);
-        return index.search(query)
+        const uid = context.auth.uid;
+        let center;
+        const radius =30*1000;
+        let bounds;
+        return db.ref("Users/"+uid+"/group").once("value").then((snap)=>{
+            const groupID = snap.val();
+            return db.ref("Groups/"+groupID+"/members/"+uid+"/location").once("value")
+        })
+        .then((snap)=>{
+            const location = snap.val();
+            const latitude = location.latitude;
+            const longitude = location.longitude;
+            center = [latitude,longitude];
+            bounds = geofire.geohashQueryBounds(center,radius);
+        })
+        .then(()=>{
+            return index.search(query);
+        })
         .then((res)=>{
             const result = res.hits;
             let i = 0;
@@ -141,13 +167,14 @@ exports.getPost = functions.https.onCall((data,context)=>{
                     for (;i<snapshot.length;i++){
                         const result = snapshot[i];
                         for (const postID in result){
-                            const post = resutl[postID];
+                            const post = result[postID];
                             const latitude = post.latitude;
                             const longitude = post.longitude;
                             const distanceInKm = geofire.distanceBetween([latitude,longitude],center);
                             const distanceInM = distanceInKm*1000;
                             if (postIDs[postID] && distanceInM<radius){
                                 postIDs[postID] = false;
+                                post["postID"] = postID;
                                 posts.push(post);
                             }
                         }
@@ -167,16 +194,28 @@ exports.getPost = functions.https.onCall((data,context)=>{
                 
                 for (;i<posts.length;i++){
                     const post = posts[i];
-                    if (post.noReport <= 10){
+                    let noReport = 0;
+                    if (post.reports){
+                        noReport = Object.keys(post.reports).length;
+                    }
+                    if (noReport <= 10){
                         const photos = JSON.parse(post.photo);
+                        let noLike = 0;
+                        if (post.likes){
+                            noLike = Object.keys(post.likes).length;
+                        }
+                        let noComment = 0;
+                        if (post.comments){
+                            noComment = Object.keys(post.comments).length;
+                        }
                         listPosts.push({
-                            postID: listPostQuery[i],
+                            postID: post.postID,
                             time:post.time,
                             title:post.title,
                             photo:photos[0],
-                            noLike:post.noLike,
-                            noComment:post.noComment,
-                            noShare:post.notShare
+                            noLike:noLike,
+                            noComment:noComment,
+                            noShare:post.noShare
                         })
                         listPromise.push(db.ref("Users/"+post.owner).once("value")
                         .then((snap)=>{
@@ -242,6 +281,7 @@ exports.getPost = functions.https.onCall((data,context)=>{
                     for (const postID in result){
                         const post = result[postID];
                         if (postIDs[postID] && post.owner == context.auth.uid){
+                            post["postID"] = postID;
                             posts.push(post);
                         }
                     }
@@ -259,16 +299,28 @@ exports.getPost = functions.https.onCall((data,context)=>{
                 let listPromise = [];
                 for (;i<posts.length;i++){
                     const post = posts[i];
-                    if (post.noReport <= 10){
+                    let noReport = 0;
+                    if (post.reports){
+                        noReport = Object.keys(post.reports).length;
+                    }
+                    if (noReport <= 10){
                         const photos = JSON.parse(post.photo);
+                        let noLike = 0;
+                        if (post.likes){
+                            noLike = Object.keys(post.likes).length;
+                        }
+                        let noComment = 0;
+                        if (post.comments){
+                            noComment = Object.keys(post.comments).length;
+                        }
                         listPosts.push({
-                            postID: listPostQuery[i],
+                            postID: post.postID,
                             time:post.time,
                             title:post.title,
                             photo:photos[0],
-                            noLike:post.noLike,
-                            noComment:post.noComment,
-                            noShare:post.notShare
+                            noLike:noLike,
+                            noComment:noComment,
+                            noShare:post.noShare
                         })
                         listPromise.push(db.ref("Users/"+post.owner).once("value")
                         .then((snap)=>{

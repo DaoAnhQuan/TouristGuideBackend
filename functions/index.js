@@ -33,6 +33,14 @@ const createPost = require("./create-post.js");
 const postCreateTrigger = require("./post-create-trigger.js");
 const postUpdateTrigger = require("./post-update-trigger.js");
 const postDeleteTrigger = require("./post-delete-trigger.js");
+const getPost = require("./get-post.js");
+const getPostDetail = require("./get-post-detail.js");
+const reportPost = require("./report-post.js");
+const likePost = require("./like-post.js");
+const deletePost = require("./delete-post.js");
+const numberLikeUpdate = require("./number-like-update.js");
+const numberCommentUpdate = require("./number-comment-update.js");
+const addComment = require("./add-comment.js");
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
 
@@ -76,3 +84,11 @@ exports.createPost = createPost.createPost;
 exports.postCreateTrigger = postCreateTrigger.postCreateTrigger;
 exports.postUpdateTrigger = postUpdateTrigger.postUpdateTrigger;
 exports.postDeleteTrigger = postDeleteTrigger.postDeleteTrigger;
+exports.getPost = getPost.getPost;
+exports.getPostDetail = getPostDetail.getPostDetail;
+exports.reportPost = reportPost.reportPost;
+exports.likePost = likePost.likePost;
+exports.deletePost = deletePost.deletePost;
+exports.numberLikeUpdate = numberLikeUpdate.numberLikeUpdate;
+exports.numberCommentUpdate = numberCommentUpdate.numberCommentUpdate;
+exports.addComment = addComment.addComment;
